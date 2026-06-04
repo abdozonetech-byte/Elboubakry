@@ -4568,3 +4568,93 @@ body.ea-funnel-lightbox-open {
     line-height: 1.16 !important;
   }
 }
+
+/* Fix — Mobile Hero Animated Role Pill No Layout Shift */
+.rs-banner-one .rs-title-slide {
+  flex-shrink: 0 !important;
+  contain: layout paint !important;
+}
+
+.rs-banner-one .rs-title-slide,
+.rs-banner-one .rs-title-slide .cd-words-wrapper,
+.rs-banner-one .rs-title-slide b {
+  white-space: nowrap !important;
+}
+
+.rs-banner-one .rs-title-slide .cd-words-wrapper {
+  overflow: hidden !important;
+}
+
+.rs-banner-one .rs-title-slide b {
+  min-width: 100% !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;
+}
+
+@media (max-width: 767px) {
+  .rs-banner-one .rs-banner-title {
+    text-wrap: normal !important;
+  }
+
+  .rs-banner-one .rs-title-slide {
+    width: clamp(198px, 52.8vw, 222px) !important;
+    min-width: clamp(198px, 52.8vw, 222px) !important;
+    max-width: clamp(198px, 52.8vw, 222px) !important;
+    height: 48px !important;
+    min-height: 48px !important;
+    max-height: 48px !important;
+    margin-left: 4px !important;
+    padding: 0 12px !important;
+    vertical-align: baseline !important;
+    overflow: hidden !important;
+    line-height: 1 !important;
+  }
+
+  .rs-banner-one .rs-title-slide .cd-words-wrapper {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: 48px !important;
+    min-height: 48px !important;
+    max-height: 48px !important;
+    line-height: 48px !important;
+    text-align: center !important;
+  }
+
+  .rs-banner-one .rs-title-slide b {
+    width: 100% !important;
+    height: 48px !important;
+    min-height: 48px !important;
+    max-height: 48px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: clamp(17px, 4.85vw, 22px) !important;
+    line-height: 48px !important;
+    letter-spacing: 0 !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .rs-banner-one .rs-title-slide {
+    width: 198px !important;
+    min-width: 198px !important;
+    max-width: 198px !important;
+    height: 46px !important;
+    min-height: 46px !important;
+    max-height: 46px !important;
+    padding: 0 10px !important;
+  }
+
+  .rs-banner-one .rs-title-slide .cd-words-wrapper,
+  .rs-banner-one .rs-title-slide b {
+    height: 46px !important;
+    min-height: 46px !important;
+    max-height: 46px !important;
+    line-height: 46px !important;
+  }
+
+  .rs-banner-one .rs-title-slide b {
+    font-size: clamp(16px, 4.65vw, 18px) !important;
+  }
+}
