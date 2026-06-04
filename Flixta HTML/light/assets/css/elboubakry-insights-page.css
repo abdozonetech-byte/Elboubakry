@@ -1,0 +1,137 @@
+
+/* Elboubakry Insights page: scoped blog/SEO layout */
+.ea-insights-hero {
+  padding-top: 170px;
+  padding-bottom: 90px;
+  position: relative;
+  overflow: hidden;
+}
+.ea-insights-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 85% 20%, rgba(54, 114, 255, 0.16), transparent 34%), radial-gradient(circle at 10% 90%, rgba(54, 114, 255, 0.09), transparent 30%);
+  pointer-events: none;
+}
+.ea-insights-hero .container { position: relative; z-index: 2; }
+.ea-insights-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(54, 114, 255, 0.10);
+  color: var(--rs-theme-primary, #3772ff);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: 13px;
+  margin-bottom: 20px;
+}
+.ea-insights-title {
+  font-size: clamp(42px, 7vw, 86px);
+  line-height: .98;
+  letter-spacing: -0.045em;
+  margin-bottom: 24px;
+}
+.ea-insights-title span { color: var(--rs-theme-primary, #3772ff); }
+.ea-insights-intro {
+  max-width: 760px;
+  font-size: 18px;
+  line-height: 1.75;
+  color: rgba(16, 24, 40, .74);
+}
+.ea-insights-keywords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 28px;
+}
+.ea-insights-keywords span {
+  border: 1px solid rgba(54, 114, 255, .18);
+  color: #1f2937;
+  background: rgba(255,255,255,.72);
+  border-radius: 999px;
+  padding: 9px 14px;
+  font-weight: 600;
+}
+.ea-insights-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 28px;
+}
+.ea-insight-card {
+  height: 100%;
+  border: 1px solid rgba(15, 23, 42, .08);
+  background: #fff;
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow: 0 20px 55px rgba(15, 23, 42, .08);
+  transition: transform .35s ease, box-shadow .35s ease;
+}
+.ea-insight-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 28px 80px rgba(15, 23, 42, .12);
+}
+.ea-insight-thumb {
+  min-height: 190px;
+  padding: 28px;
+  background: linear-gradient(135deg, rgba(54,114,255,.16), rgba(54,114,255,.04));
+  display: flex;
+  align-items: flex-end;
+}
+.ea-insight-thumb i {
+  font-size: 56px;
+  color: var(--rs-theme-primary, #3772ff);
+}
+.ea-insight-body { padding: 28px; }
+.ea-insight-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--rs-theme-primary, #3772ff);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: 14px;
+}
+.ea-insight-card h3 {
+  font-size: 24px;
+  line-height: 1.22;
+  margin-bottom: 14px;
+}
+.ea-insight-card p {
+  line-height: 1.68;
+  margin-bottom: 22px;
+  color: rgba(16, 24, 40, .72);
+}
+.ea-insight-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: #111827;
+}
+.ea-insight-link i { color: var(--rs-theme-primary, #3772ff); }
+.ea-insights-cta {
+  border-radius: 32px;
+  padding: 42px;
+  background: #111827;
+  color: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+}
+.ea-insights-cta h2 { color: #fff; margin-bottom: 10px; }
+.ea-insights-cta p { color: rgba(255,255,255,.76); max-width: 700px; margin: 0; }
+@media (max-width: 991px) {
+  .ea-insights-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ea-insights-cta { flex-direction: column; align-items: flex-start; }
+}
+@media (max-width: 767px) {
+  .ea-insights-hero { padding-top: 130px; padding-bottom: 60px; }
+  .ea-insights-grid { grid-template-columns: 1fr; }
+  .ea-insights-cta { padding: 28px; }
+}

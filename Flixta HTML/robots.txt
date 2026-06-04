@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://elboubakry.com/sitemap.xml

@@ -1,0 +1,19 @@
+{
+  "name": "Elboubakry Abdessamad",
+  "short_name": "Elboubakry",
+  "icons": [
+    {
+      "src": "light/assets/images/logo-e-blue.png",
+      "sizes": "76x76",
+      "type": "image/png"
+    },
+    {
+      "src": "light/assets/images/logo-e-blue.png",
+      "sizes": "76x76",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#5570ff",
+  "background_color": "#f8fbff",
+  "display": "standalone"
+}
