@@ -9,9 +9,11 @@
   }
 
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  var RAIL_DRAG_THRESHOLD = 8;
   var resetPoint = 0;
   var speed = window.innerWidth < 768 ? 18 : 29;
   var dragging = false;
+  var railPointerActive = false;
   var railDragActive = false;
   var railPointerId = null;
   var railPointerCaptured = false;
@@ -113,13 +115,37 @@
     }, typeof delay === "number" ? delay : 140);
   }
 
+  function captureRailPointer(event) {
+    if (railPointerCaptured || !rail.setPointerCapture) {
+      return;
+    }
+
+    try {
+      rail.setPointerCapture(event.pointerId);
+      railPointerCaptured = true;
+    } catch (error) {
+      /* Synthetic QA events may not register an active pointer. */
+    }
+  }
+
+  function activateRailDrag(event, deltaX) {
+    railDragActive = true;
+    railDragMoved = true;
+    pauseDrag();
+    captureRailPointer(event);
+    rail.classList.add("is-dragging");
+
+    /* The auto-scroll may have advanced since pointerdown; start from the current visual position. */
+    railStartScrollLeft = rail.scrollLeft;
+  }
+
   function startRailDrag(event) {
     if (lightboxOpen || event.button > 0) {
       return;
     }
 
-    pauseDrag();
-    railDragActive = true;
+    railPointerActive = true;
+    railDragActive = false;
     syncRailPosition();
     railPointerId = event.pointerId;
     railStartX = event.clientX;
@@ -129,11 +155,11 @@
     railDragMoved = false;
     railClickSuppressed = false;
     railPointerCaptured = false;
-    rail.classList.add("is-dragging");
+    captureRailPointer(event);
   }
 
   function moveRailDrag(event) {
-    if (!railDragActive || event.pointerId !== railPointerId) {
+    if (!railPointerActive || event.pointerId !== railPointerId) {
       return;
     }
 
@@ -142,47 +168,49 @@
 
     railDragDeltaX = deltaX;
 
-    if (Math.abs(deltaX) > 5 && Math.abs(deltaX) > Math.abs(deltaY) * .65) {
+    if (Math.abs(deltaX) > RAIL_DRAG_THRESHOLD && Math.abs(deltaX) > Math.abs(deltaY) * .65) {
       event.preventDefault();
-      railDragMoved = true;
 
-      if (!railPointerCaptured && rail.setPointerCapture) {
-        try {
-          rail.setPointerCapture(event.pointerId);
-          railPointerCaptured = true;
-        } catch (error) {
-          /* Synthetic QA events may not register an active pointer. */
-        }
+      if (!railDragActive) {
+        activateRailDrag(event, deltaX);
       }
+
+      railDragMoved = true;
     }
 
-    window.cancelAnimationFrame(railDragFrame);
-    railDragFrame = window.requestAnimationFrame(function () {
-      railAutoPosition = normalizeRailValue(railStartScrollLeft - railDragDeltaX);
-      rail.scrollLeft = railAutoPosition;
-    });
+    if (railDragActive) {
+      window.cancelAnimationFrame(railDragFrame);
+      railDragFrame = window.requestAnimationFrame(function () {
+        railAutoPosition = normalizeRailValue(railStartScrollLeft - railDragDeltaX);
+        rail.scrollLeft = railAutoPosition;
+      });
+    }
   }
 
   function endRailDrag(event) {
-    if (!railDragActive || (event && event.pointerId !== railPointerId)) {
+    if (!railPointerActive || (event && event.pointerId !== railPointerId)) {
       return;
     }
 
+    var wasDragging = railDragActive;
     railDragActive = false;
+    railPointerActive = false;
     railPointerId = null;
     railPointerCaptured = false;
     window.cancelAnimationFrame(railDragFrame);
-    normalizeRailScroll();
+    syncRailPosition();
     rail.classList.remove("is-dragging");
 
-    if (railDragMoved || Math.abs(railDragDeltaX) > 7) {
+    if (wasDragging || railDragMoved || Math.abs(railDragDeltaX) > RAIL_DRAG_THRESHOLD) {
       railClickSuppressed = true;
       window.setTimeout(function () {
         railClickSuppressed = false;
       }, 260);
     }
 
-    resumeDrag(120);
+    if (wasDragging) {
+      resumeDrag(120);
+    }
   }
 
   function handleRailWheel(event) {
@@ -201,6 +229,16 @@
     railAutoPosition = normalizeRailValue(rail.scrollLeft + horizontalDelta);
     rail.scrollLeft = railAutoPosition;
     resumeDrag(160);
+  }
+
+  function suppressClickAfterRailDrag(event) {
+    if (!railClickSuppressed) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    railClickSuppressed = false;
   }
 
   function buildLightbox() {
@@ -499,6 +537,7 @@
   rail.addEventListener("pointercancel", endRailDrag);
   rail.addEventListener("lostpointercapture", endRailDrag);
   rail.addEventListener("wheel", handleRailWheel, { passive: false });
+  rail.addEventListener("click", suppressClickAfterRailDrag, true);
   track.addEventListener("click", function (event) {
     var trigger = event.target.closest(".elb-mockup-open");
 
