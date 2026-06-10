@@ -12,9 +12,19 @@
   var resetPoint = 0;
   var speed = window.innerWidth < 768 ? 18 : 29;
   var dragging = false;
+  var railDragActive = false;
+  var railPointerId = null;
+  var railPointerCaptured = false;
+  var railStartX = 0;
+  var railStartY = 0;
+  var railStartScrollLeft = 0;
+  var railDragDeltaX = 0;
+  var railDragMoved = false;
+  var railDragFrame = null;
+  var railClickSuppressed = false;
   var lightboxOpen = false;
-  var switching = false;
   var currentIndex = 0;
+  var positionIndex = 1;
   var items = Array.prototype.slice.call(track.querySelectorAll(".elb-mockup-slide:not([aria-hidden]) img")).map(function (image) {
     return {
       src: image.getAttribute("src"),
@@ -22,29 +32,73 @@
     };
   });
   var lightbox = null;
-  var lightboxImage = null;
+  var lightboxViewport = null;
+  var lightboxTrack = null;
   var closeButton = null;
   var resumeTimer = null;
-  var switchTimer = null;
-  var touchStartX = 0;
-  var touchStartY = 0;
+  var dragPointerId = null;
+  var dragStartX = 0;
+  var dragStartY = 0;
+  var dragDeltaX = 0;
+  var dragFrame = null;
+  var dragActive = false;
+  var dragMoved = false;
+  var wheelTimer = null;
+  var lastFrameTime = 0;
+  var railAutoPosition = 0;
 
   function measure() {
     var duplicate = track.querySelector('[aria-hidden="true"]');
     resetPoint = duplicate && window.getComputedStyle(duplicate).display !== "none" ? track.scrollWidth / 2 : 0;
     speed = window.innerWidth < 768 ? 18 : 29;
+    syncRailPosition();
   }
 
-  function tick() {
-    var interactionPaused = lightboxOpen || dragging || rail.contains(document.activeElement);
+  function tick(timestamp) {
+    if (!lastFrameTime) {
+      lastFrameTime = timestamp;
+    }
+
+    var deltaTime = Math.min(48, timestamp - lastFrameTime);
+    var interactionPaused = lightboxOpen || dragging || railDragActive;
+
+    lastFrameTime = timestamp;
 
     if (!interactionPaused && !reduceMotion.matches && resetPoint > 0) {
-      rail.scrollLeft += speed / 20;
-
-      if (rail.scrollLeft >= resetPoint) {
-        rail.scrollLeft -= resetPoint;
-      }
+      railAutoPosition = normalizeRailValue(railAutoPosition + (speed * (deltaTime / 1000)));
+      rail.scrollLeft = railAutoPosition;
     }
+
+    window.requestAnimationFrame(tick);
+  }
+
+  function normalizeRailValue(value) {
+    if (!resetPoint) {
+      return value;
+    }
+
+    while (value >= resetPoint) {
+      value -= resetPoint;
+    }
+
+    while (value < 0) {
+      value += resetPoint;
+    }
+
+    return value;
+  }
+
+  function normalizeRailScroll() {
+    if (!resetPoint) {
+      return;
+    }
+
+    railAutoPosition = normalizeRailValue(rail.scrollLeft);
+    rail.scrollLeft = railAutoPosition;
+  }
+
+  function syncRailPosition() {
+    railAutoPosition = resetPoint ? normalizeRailValue(rail.scrollLeft) : rail.scrollLeft;
   }
 
   function pauseDrag() {
@@ -52,11 +106,101 @@
     dragging = true;
   }
 
-  function resumeDrag() {
+  function resumeDrag(delay) {
     window.clearTimeout(resumeTimer);
     resumeTimer = window.setTimeout(function () {
       dragging = false;
-    }, 700);
+    }, typeof delay === "number" ? delay : 140);
+  }
+
+  function startRailDrag(event) {
+    if (lightboxOpen || event.button > 0) {
+      return;
+    }
+
+    pauseDrag();
+    railDragActive = true;
+    syncRailPosition();
+    railPointerId = event.pointerId;
+    railStartX = event.clientX;
+    railStartY = event.clientY;
+    railStartScrollLeft = rail.scrollLeft;
+    railDragDeltaX = 0;
+    railDragMoved = false;
+    railClickSuppressed = false;
+    railPointerCaptured = false;
+    rail.classList.add("is-dragging");
+  }
+
+  function moveRailDrag(event) {
+    if (!railDragActive || event.pointerId !== railPointerId) {
+      return;
+    }
+
+    var deltaX = event.clientX - railStartX;
+    var deltaY = event.clientY - railStartY;
+
+    railDragDeltaX = deltaX;
+
+    if (Math.abs(deltaX) > 5 && Math.abs(deltaX) > Math.abs(deltaY) * .65) {
+      event.preventDefault();
+      railDragMoved = true;
+
+      if (!railPointerCaptured && rail.setPointerCapture) {
+        try {
+          rail.setPointerCapture(event.pointerId);
+          railPointerCaptured = true;
+        } catch (error) {
+          /* Synthetic QA events may not register an active pointer. */
+        }
+      }
+    }
+
+    window.cancelAnimationFrame(railDragFrame);
+    railDragFrame = window.requestAnimationFrame(function () {
+      railAutoPosition = normalizeRailValue(railStartScrollLeft - railDragDeltaX);
+      rail.scrollLeft = railAutoPosition;
+    });
+  }
+
+  function endRailDrag(event) {
+    if (!railDragActive || (event && event.pointerId !== railPointerId)) {
+      return;
+    }
+
+    railDragActive = false;
+    railPointerId = null;
+    railPointerCaptured = false;
+    window.cancelAnimationFrame(railDragFrame);
+    normalizeRailScroll();
+    rail.classList.remove("is-dragging");
+
+    if (railDragMoved || Math.abs(railDragDeltaX) > 7) {
+      railClickSuppressed = true;
+      window.setTimeout(function () {
+        railClickSuppressed = false;
+      }, 260);
+    }
+
+    resumeDrag(120);
+  }
+
+  function handleRailWheel(event) {
+    var horizontalDelta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : 0;
+
+    if (!horizontalDelta && event.shiftKey) {
+      horizontalDelta = event.deltaY;
+    }
+
+    if (!horizontalDelta) {
+      return;
+    }
+
+    event.preventDefault();
+    pauseDrag();
+    railAutoPosition = normalizeRailValue(rail.scrollLeft + horizontalDelta);
+    rail.scrollLeft = railAutoPosition;
+    resumeDrag(160);
   }
 
   function buildLightbox() {
@@ -69,15 +213,19 @@
       '<div class="elb-lightbox-panel">',
       '<button class="elb-lightbox-close" type="button" aria-label="Fermer l’aperçu">&times;</button>',
       '<button class="elb-lightbox-nav elb-lightbox-prev" type="button" aria-label="Image précédente">‹</button>',
-      '<img class="elb-lightbox-image" alt="" />',
+      '<div class="elb-lightbox-viewport" aria-live="polite">',
+      '<div class="elb-lightbox-track"></div>',
+      '</div>',
       '<button class="elb-lightbox-nav elb-lightbox-next" type="button" aria-label="Image suivante">›</button>',
       "</div>"
     ].join("");
 
     document.body.appendChild(lightbox);
 
-    lightboxImage = lightbox.querySelector(".elb-lightbox-image");
+    lightboxViewport = lightbox.querySelector(".elb-lightbox-viewport");
+    lightboxTrack = lightbox.querySelector(".elb-lightbox-track");
     closeButton = lightbox.querySelector(".elb-lightbox-close");
+    renderLightboxSlides();
 
     closeButton.addEventListener("click", closeLightbox);
     lightbox.querySelector(".elb-lightbox-prev").addEventListener("click", function () {
@@ -91,63 +239,123 @@
         closeLightbox();
       }
     });
-    lightbox.addEventListener("touchstart", function (event) {
-      if (!event.touches || !event.touches.length) {
-        return;
-      }
-
-      touchStartX = event.touches[0].clientX;
-      touchStartY = event.touches[0].clientY;
-    }, { passive: true });
-    lightbox.addEventListener("touchend", function (event) {
-      if (!event.changedTouches || !event.changedTouches.length) {
-        return;
-      }
-
-      var deltaX = event.changedTouches[0].clientX - touchStartX;
-      var deltaY = event.changedTouches[0].clientY - touchStartY;
-
-      if (Math.abs(deltaX) > 46 && Math.abs(deltaX) > Math.abs(deltaY) * 1.4) {
-        showLightboxItem(currentIndex + (deltaX < 0 ? 1 : -1), deltaX < 0 ? "next" : "prev");
-      }
-    }, { passive: true });
+    lightboxTrack.addEventListener("transitionend", normalizeLightboxPosition);
+    lightboxViewport.addEventListener("pointerdown", startLightboxDrag);
+    lightboxViewport.addEventListener("pointermove", moveLightboxDrag);
+    lightboxViewport.addEventListener("pointerup", endLightboxDrag);
+    lightboxViewport.addEventListener("pointercancel", endLightboxDrag);
+    lightboxViewport.addEventListener("lostpointercapture", endLightboxDrag);
+    lightboxViewport.addEventListener("wheel", handleLightboxWheel, { passive: false });
   }
 
-  function setLightboxImage(index) {
+  function getSlides() {
+    if (!items.length) {
+      return [];
+    }
+
+    return [items[items.length - 1]].concat(items, [items[0]]);
+  }
+
+  function renderLightboxSlides() {
+    if (!lightboxTrack) {
+      return;
+    }
+
+    lightboxTrack.innerHTML = getSlides().map(function (item) {
+      return [
+        '<div class="elb-lightbox-slide">',
+        '<img class="elb-lightbox-image" src="',
+        item.src,
+        '" alt="',
+        item.alt.replace(/"/g, "&quot;"),
+        '" draggable="false" />',
+        "</div>"
+      ].join("");
+    }).join("");
+  }
+
+  function getViewportWidth() {
+    return lightboxViewport ? lightboxViewport.getBoundingClientRect().width : 0;
+  }
+
+  function setTrackTransition(enabled) {
+    if (!lightboxTrack) {
+      return;
+    }
+
+    lightboxTrack.style.transition = enabled ? "" : "none";
+  }
+
+  function updateLightboxTransform(deltaX) {
+    if (!lightboxTrack) {
+      return;
+    }
+
+    var viewportWidth = getViewportWidth();
+    lightboxTrack.style.transform = "translate3d(" + ((positionIndex * viewportWidth * -1) + (deltaX || 0)) + "px, 0, 0)";
+  }
+
+  function setLightboxImage(index, immediate) {
     if (!items.length) {
       return;
     }
 
     currentIndex = (index + items.length) % items.length;
-    lightboxImage.src = items[currentIndex].src;
-    lightboxImage.alt = items[currentIndex].alt;
+    positionIndex = currentIndex + 1;
+    setTrackTransition(!immediate);
+    updateLightboxTransform(0);
+    if (immediate) {
+      window.requestAnimationFrame(function () {
+        setTrackTransition(true);
+      });
+    }
+  }
+
+  function normalizeLightboxPosition() {
+    if (!items.length || dragActive) {
+      return;
+    }
+
+    if (positionIndex === 0) {
+      currentIndex = items.length - 1;
+      positionIndex = items.length;
+    } else if (positionIndex === items.length + 1) {
+      currentIndex = 0;
+      positionIndex = 1;
+    } else {
+      currentIndex = positionIndex - 1;
+    }
+
+    setTrackTransition(false);
+    updateLightboxTransform(0);
+    window.requestAnimationFrame(function () {
+      setTrackTransition(true);
+    });
   }
 
   function showLightboxItem(index, direction) {
-    if (!items.length || switching) {
+    if (!items.length || !lightboxTrack) {
       return;
     }
 
-    if (!lightbox || !lightboxOpen || !lightboxImage.src) {
-      setLightboxImage(index);
+    if (!lightbox || !lightboxOpen) {
+      setLightboxImage(index, true);
       return;
     }
 
-    switching = true;
-    window.clearTimeout(switchTimer);
-    lightbox.classList.remove("is-switching-prev", "is-switching-next");
-    lightbox.classList.add(direction === "prev" ? "is-switching-prev" : "is-switching-next");
+    lightbox.classList.remove("is-dragging");
+    setTrackTransition(true);
 
-    switchTimer = window.setTimeout(function () {
-      setLightboxImage(index);
-      lightbox.classList.remove("is-switching-prev", "is-switching-next");
-      lightbox.classList.add("is-switching-in");
+    if (index < 0) {
+      positionIndex = 0;
+    } else if (index >= items.length) {
+      positionIndex = items.length + 1;
+    } else {
+      positionIndex = index + 1;
+    }
 
-      switchTimer = window.setTimeout(function () {
-        lightbox.classList.remove("is-switching-in");
-        switching = false;
-      }, 180);
-    }, 150);
+    currentIndex = (index + items.length) % items.length;
+    updateLightboxTransform(0);
   }
 
   function openLightbox(index) {
@@ -155,11 +363,12 @@
       buildLightbox();
     }
 
-    setLightboxImage(index);
+    setLightboxImage(index, true);
     lightboxOpen = true;
     document.body.classList.add("elb-lightbox-open");
     window.requestAnimationFrame(function () {
       lightbox.classList.add("is-open");
+      updateLightboxTransform(0);
     });
     closeButton.focus({ preventScroll: true });
   }
@@ -170,13 +379,96 @@
     }
 
     lightboxOpen = false;
-    switching = false;
-    window.clearTimeout(switchTimer);
-    lightbox.classList.remove("is-switching-prev", "is-switching-next", "is-switching-in");
+    dragActive = false;
+    dragPointerId = null;
+    window.cancelAnimationFrame(dragFrame);
+    lightbox.classList.remove("is-dragging");
     lightbox.classList.remove("is-open");
     window.setTimeout(function () {
       document.body.classList.remove("elb-lightbox-open");
     }, 260);
+  }
+
+  function startLightboxDrag(event) {
+    if (!lightboxOpen || !items.length || event.button > 0) {
+      return;
+    }
+
+    dragPointerId = event.pointerId;
+    dragStartX = event.clientX;
+    dragStartY = event.clientY;
+    dragDeltaX = 0;
+    dragMoved = false;
+    dragActive = true;
+    lightbox.classList.add("is-dragging");
+    setTrackTransition(false);
+    if (lightboxViewport.setPointerCapture) {
+      try {
+        lightboxViewport.setPointerCapture(event.pointerId);
+      } catch (error) {
+        /* Synthetic QA events may not register an active pointer. */
+      }
+    }
+  }
+
+  function moveLightboxDrag(event) {
+    if (!dragActive || event.pointerId !== dragPointerId) {
+      return;
+    }
+
+    var deltaX = event.clientX - dragStartX;
+    var deltaY = event.clientY - dragStartY;
+
+    if (Math.abs(deltaX) > 4 && Math.abs(deltaX) > Math.abs(deltaY) * .72) {
+      event.preventDefault();
+      dragMoved = true;
+    }
+
+    dragDeltaX = deltaX;
+    window.cancelAnimationFrame(dragFrame);
+    dragFrame = window.requestAnimationFrame(function () {
+      updateLightboxTransform(dragDeltaX);
+    });
+  }
+
+  function endLightboxDrag(event) {
+    if (!dragActive || (event && event.pointerId !== dragPointerId)) {
+      return;
+    }
+
+    var threshold = Math.min(90, Math.max(50, getViewportWidth() * .12));
+    var deltaX = dragDeltaX;
+
+    dragActive = false;
+    dragPointerId = null;
+    dragDeltaX = 0;
+    lightbox.classList.remove("is-dragging");
+    setTrackTransition(true);
+
+    if (deltaX < threshold * -1) {
+      showLightboxItem(currentIndex + 1, "next");
+    } else if (deltaX > threshold) {
+      showLightboxItem(currentIndex - 1, "prev");
+    } else {
+      updateLightboxTransform(0);
+    }
+  }
+
+  function handleLightboxWheel(event) {
+    if (!lightboxOpen || Math.abs(event.deltaX) < Math.abs(event.deltaY) || Math.abs(event.deltaX) < 24) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (wheelTimer) {
+      return;
+    }
+
+    showLightboxItem(currentIndex + (event.deltaX > 0 ? 1 : -1), event.deltaX > 0 ? "next" : "prev");
+    wheelTimer = window.setTimeout(function () {
+      wheelTimer = null;
+    }, 320);
   }
 
   function handleKeydown(event) {
@@ -195,20 +487,18 @@
 
   measure();
   window.addEventListener("resize", measure, { passive: true });
+  window.addEventListener("resize", function () {
+    if (lightboxOpen) {
+      setLightboxImage(currentIndex, true);
+    }
+  }, { passive: true });
   document.addEventListener("keydown", handleKeydown);
-  rail.addEventListener("touchstart", pauseDrag, { passive: true });
-  rail.addEventListener("touchend", resumeDrag, { passive: true });
-  rail.addEventListener("pointerdown", function (event) {
-    if (event.pointerType === "touch" || event.pointerType === "pen") {
-      pauseDrag();
-    }
-  }, { passive: true });
-  rail.addEventListener("pointerup", function (event) {
-    if (event.pointerType === "touch" || event.pointerType === "pen") {
-      resumeDrag();
-    }
-  }, { passive: true });
-  rail.addEventListener("pointercancel", resumeDrag, { passive: true });
+  rail.addEventListener("pointerdown", startRailDrag);
+  rail.addEventListener("pointermove", moveRailDrag);
+  rail.addEventListener("pointerup", endRailDrag);
+  rail.addEventListener("pointercancel", endRailDrag);
+  rail.addEventListener("lostpointercapture", endRailDrag);
+  rail.addEventListener("wheel", handleRailWheel, { passive: false });
   track.addEventListener("click", function (event) {
     var trigger = event.target.closest(".elb-mockup-open");
 
@@ -216,8 +506,15 @@
       return;
     }
 
+    if (railClickSuppressed) {
+      event.preventDefault();
+      event.stopPropagation();
+      railClickSuppressed = false;
+      return;
+    }
+
     openLightbox(Number(trigger.getAttribute("data-mockup-index")) || 0);
   });
 
-  window.setInterval(tick, 50);
+  window.requestAnimationFrame(tick);
 })();

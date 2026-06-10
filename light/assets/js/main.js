@@ -881,6 +881,29 @@ Sidebar Toggle
     var formMessages = $('#form-messages');
     $(form).submit(function (e) {
         e.preventDefault();
+        var nameValue = $.trim($('#name').val() || '');
+        var phoneValue = $.trim($('#phone').val() || '');
+        var emailValue = $.trim($('#email').val() || '');
+
+        $(formMessages).removeClass('success error').text('');
+
+        if (nameValue === '') {
+            $(formMessages).addClass('error').text('Ajoutez votre nom complet pour continuer.');
+            $('#name').trigger('focus');
+            return;
+        }
+
+        if (phoneValue === '' && emailValue === '') {
+            $(formMessages).addClass('error').text('Ajoutez votre téléphone ou votre email pour que je puisse vous recontacter.');
+            $('#phone').trigger('focus');
+            return;
+        }
+
+        if (this.checkValidity && !this.checkValidity()) {
+            this.reportValidity();
+            return;
+        }
+
         var formData = $(form).serialize();
         $.ajax({
             type: 'POST',

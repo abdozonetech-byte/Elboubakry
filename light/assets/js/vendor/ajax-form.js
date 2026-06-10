@@ -11,6 +11,10 @@ $(function() {
 		// Stop the browser from submitting the form.
 		e.preventDefault();
 
+		if ($(form).data('custom-validation')) {
+			return;
+		}
+
 		// Serialize the form data.
 		var formData = $(form).serialize();
 

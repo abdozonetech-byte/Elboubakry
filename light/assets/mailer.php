@@ -22,14 +22,15 @@ function clean_message($value, $maxLength = 3000) {
 }
 
 $name = clean_text($_POST['name'] ?? '', 100);
-$email = filter_var(trim((string) ($_POST['email'] ?? '')), FILTER_VALIDATE_EMAIL);
+$emailInput = trim((string) ($_POST['email'] ?? ''));
+$email = $emailInput !== '' ? filter_var($emailInput, FILTER_VALIDATE_EMAIL) : false;
 $phone = clean_text($_POST['phone'] ?? '', 40);
-$subjectInput = clean_text($_POST['subject'] ?? 'Portfolio contact', 120);
+$subjectInput = clean_text($_POST['subject'] ?? 'Consultation gratuite', 120);
 $message = clean_message($_POST['message'] ?? '', 3000);
 
-if ($name === '' || !$email || $message === '') {
+if ($name === '' || ($phone === '' && !$email)) {
     http_response_code(400);
-    echo 'Please complete the required fields correctly.';
+    echo 'Ajoutez votre téléphone ou votre email pour que je puisse vous recontacter.';
     exit;
 }
 
@@ -40,13 +41,15 @@ if (!$recipient || !filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
     exit;
 }
 
-$subject = 'Portfolio contact: ' . $subjectInput;
+$subject = 'Consultation gratuite: ' . $subjectInput;
 $emailContent = "Name: {$name}\n";
-$emailContent .= "Email: {$email}\n";
+if ($email) {
+    $emailContent .= "Email: {$email}\n";
+}
 if ($phone !== '') {
     $emailContent .= "Phone: {$phone}\n";
 }
-$emailContent .= "\nMessage:\n{$message}\n";
+$emailContent .= "\nProject objective:\n" . ($message !== '' ? $message : 'Not provided') . "\n";
 
 $host = preg_replace('/[^A-Za-z0-9.-]/', '', (string) ($_SERVER['HTTP_HOST'] ?? 'localhost'));
 if ($host === '') {
@@ -55,16 +58,19 @@ if ($host === '') {
 
 $headers = array(
     'From: Portfolio Website <no-reply@' . $host . '>',
-    'Reply-To: ' . $email,
     'Content-Type: text/plain; charset=UTF-8',
     'X-Mailer: PHP/' . phpversion(),
 );
 
+if ($email) {
+    $headers[] = 'Reply-To: ' . $email;
+}
+
 if (mail($recipient, $subject, $emailContent, implode("\r\n", $headers))) {
     http_response_code(200);
-    echo 'Thank you. Your message has been sent.';
+    echo 'Merci. Votre demande de consultation a bien été envoyée.';
 } else {
     http_response_code(500);
-    echo 'Message could not be sent.';
+    echo 'Votre demande n’a pas pu être envoyée.';
 }
 ?>
