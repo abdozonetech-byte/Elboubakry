@@ -21,5 +21,4 @@ The page stayed stuck on the Flixta loading screen because `assets/js/main.js` c
 If you start the server from the extracted folder root, open:
 `http://localhost:5500/`
 
-If you start the server from inside `Flixta HTML`, open:
-`http://localhost:5500/light/index-resume-one-page.html`
+The old duplicate `Flixta HTML/` folder is no longer part of the cleaned production ZIP.

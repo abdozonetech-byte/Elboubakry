@@ -12,7 +12,7 @@ python3 -m http.server 5500
 Then open `http://localhost:5500/`.
 
 ## Deployment
-Upload the full `Flixta HTML` folder contents to Netlify, Vercel, Hostinger, or any static hosting.
+Upload the cleaned project root contents to GitHub Pages, Netlify, Vercel, Hostinger, or any static hosting. The official production website is inside `/light/`, and the root `index.html` redirects to it.
 
 ## Contact privacy
 The phone number and email are used only inside WhatsApp/mail buttons. They are not displayed as plain visible text on the page.

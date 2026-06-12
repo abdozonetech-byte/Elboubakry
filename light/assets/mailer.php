@@ -4,7 +4,7 @@
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
-    echo 'Method not allowed.';
+    echo 'Méthode non autorisée.';
     exit;
 }
 
@@ -37,19 +37,19 @@ if ($name === '' || ($phone === '' && !$email)) {
 $recipient = getenv('CONTACT_EMAIL');
 if (!$recipient || !filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
     http_response_code(500);
-    echo 'Contact email is not configured.';
+    echo 'L’adresse de contact n’est pas configurée.';
     exit;
 }
 
 $subject = 'Consultation gratuite: ' . $subjectInput;
-$emailContent = "Name: {$name}\n";
+$emailContent = "Nom: {$name}\n";
 if ($email) {
     $emailContent .= "Email: {$email}\n";
 }
 if ($phone !== '') {
-    $emailContent .= "Phone: {$phone}\n";
+    $emailContent .= "Téléphone: {$phone}\n";
 }
-$emailContent .= "\nProject objective:\n" . ($message !== '' ? $message : 'Not provided') . "\n";
+$emailContent .= "\nObjectif du projet:\n" . ($message !== '' ? $message : 'Non renseigné') . "\n";
 
 $host = preg_replace('/[^A-Za-z0-9.-]/', '', (string) ($_SERVER['HTTP_HOST'] ?? 'localhost'));
 if ($host === '') {

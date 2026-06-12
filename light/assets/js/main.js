@@ -927,7 +927,7 @@ Sidebar Toggle
             if (data.responseText !== '') {
                 $(formMessages).text(data.responseText);
             } else {
-                $(formMessages).text('Oops! An error occurred and your message could not be sent.');
+                $(formMessages).text('Votre demande n’a pas pu être envoyée. Réessayez ou contactez-moi directement sur WhatsApp.');
             }
         });
     });

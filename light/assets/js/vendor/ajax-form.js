@@ -44,7 +44,7 @@ $(function() {
 			if (data.responseText !== '') {
 				$(formMessages).text(data.responseText);
 			} else {
-				$(formMessages).text('Please complete the form and try again');
+				$(formMessages).text('Complétez le formulaire puis réessayez.');
 			}
 		});
 	});

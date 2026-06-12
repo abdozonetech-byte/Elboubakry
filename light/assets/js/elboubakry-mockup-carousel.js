@@ -155,7 +155,6 @@
     railDragMoved = false;
     railClickSuppressed = false;
     railPointerCaptured = false;
-    captureRailPointer(event);
   }
 
   function moveRailDrag(event) {
